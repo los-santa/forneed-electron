@@ -1,14 +1,198 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ForNeed</title>
+  <meta charset="UTF-8" />
+  <title>ForNeed - All Requirements</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    .card-item {
+      cursor: pointer;
+      padding: 8px;
+      border-bottom: 1px solid #ccc;
+    }
+    .card-item:hover {
+      background-color: #f0f0f0;
+    }
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.4);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 99;
+    }
+    .modal {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      width: 500px;
+      max-height: 80%;
+      overflow: auto;
+      position: relative;
+    }
+    .closeBtn {
+      position: absolute;
+      top: 10px; right: 10px;
+    }
+    .dropdown-list {
+      position: absolute;
+      background: #fff;
+      border: 1px solid #aaa;
+      max-height: 180px;
+      overflow-y: auto;
+      width: 90%;
+      z-index: 999;
+    }
+    .dropdown-item {
+      padding: 5px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+    }
+    .dropdown-item:hover {
+      background: #f0f0f0;
+    }
+    .dropdown-item.nonexistent {
+      color: #999; /* 연한색 */
+    }
+    #graphContainer {
+      width: 600px;
+      height: 400px;
+      background: #f3f3f3;
+    }
+    #btnGraphClose {
+      position: absolute;
+      top: 10px; right: 10px;
+    }
+  </style>
+  <!-- cytoscape -->
+  <script src="node_modules/cytoscape/dist/cytoscape.min.js"></script>
+  <script src="renderer.js"></script>
 </head>
 <body>
-    <button id="saveButton">Save Card</button>
-    <div id="cy" style="width: 800px; height: 600px;"></div>
+  <h1>ForNeed (All-in-One Final)</h1>
+  <button id="createCardButton">새 카드 (Ctrl+N)</button>
+  <button id="openSearchButton">검색 (Ctrl+O)</button>
+  <button id="graphViewButton">그래프 보기</button>
+  <button id="showIncompleteButton">For/Need 비어있는 카드</button>
+  <button id="exportPlanButton">계획 내보내기</button>
+
+  <h2>카드 목록</h2>
+  <div id="cardList"></div>
+
+  <!-- 새 카드 생성 모달 -->
+  <div class="modal-overlay" id="createModalOverlay">
+    <div class="modal">
+      <h3>새 카드 만들기</h3>
+      <label>제목(Title)</label><br/>
+      <input type="text" id="createTitleInput"/><br/><br/>
+
+      <label>For 값 (쉼표 구분, 위)</label><br/>
+      <input type="text" id="createForInput" autocomplete="off"/>
+      <div id="createForDropdown" class="dropdown-list" style="display:none;"></div>
+      <br/><br/>
+
+      <label>Need 값 (쉼표 구분, 아래)</label><br/>
+      <input type="text" id="createNeedInput" autocomplete="off"/>
+      <div id="createNeedDropdown" class="dropdown-list" style="display:none;"></div>
+      <br/><br/>
+
+      <label>내용(Content) - 비울수 있음</label><br/>
+      <textarea id="createContentInput" rows="2"></textarea><br/><br/>
+
+
+      <label>시작 날짜(Start)</label><br/>
+      <input type="date" id="createStartDate"/><br/><br/>
+
+      <label>종료 날짜(End)</label><br/>
+      <input type="date" id="createEndDate"/><br/><br/>
+
+      <label>총 소요시간(TotalTime)</label><br/>
+      <input type="number" id="createTotalTime"/><br/><br/>
+
+      <label>데드라인(Deadline)</label><br/>
+      <input type="date" id="createDeadline"/><br/><br/>
+
+      <button id="btnCreateConfirm">Create</button>
+      <button id="btnCreateCancel">Cancel</button>
+    </div>
+  </div>
+
+  <!-- 카드 편집 모달 -->
+  <div class="modal-overlay" id="editModalOverlay">
+    <div class="modal">
+      <h3>카드 조회/편집</h3>
+      <label>제목(Title)</label><br/>
+      <input type="text" id="editTitleInput"/><br/><br/>
+
+      <label>For 값</label><br/>
+      <input type="text" id="editForInput" autocomplete="off"/>
+      <div id="editForDropdown" class="dropdown-list" style="display:none;"></div>
+      <br/><br/>
+
+      <label>Need 값</label><br/>
+      <input type="text" id="editNeedInput" autocomplete="off"/>
+      <div id="editNeedDropdown" class="dropdown-list" style="display:none;"></div>
+      <br/><br/>
+
+      <label>내용(Content)</label><br/>
+      <textarea id="editContentInput" rows="2"></textarea><br/><br/>
+
+      <label>시작 날짜(Start)</label><br/>
+      <input type="date" id="editStartDate"/><br/><br/>
+
+      <label>종료 날짜(End)</label><br/>
+      <input type="date" id="editEndDate"/><br/><br/>
+
+      <label>총 소요시간(TotalTime)</label><br/>
+      <input type="number" id="editTotalTime"/><br/><br/>
+
+      <label>데드라인(Deadline)</label><br/>
+      <input type="date" id="editDeadline"/><br/><br/>
+
+      <input type="checkbox" id="editCompleteCheck"/>
+      <label for="editCompleteCheck">완료</label><br/>
+      <input type="checkbox" id="editBookmarkCheck"/>
+      <label for="editBookmarkCheck">즐겨찾기</label><br/><br/>
+
+      <div id="editForLinks"></div>
+      <div id="editNeedLinks"></div>
+
+      <button id="btnDeleteCard" style="margin-right:10px;color:red;">Delete</button>
+      <button id="btnEditConfirm">Save</button>
+      <button id="btnEditCancel">Cancel</button>
+    </div>
+  </div>
+
+  <!-- 검색 모달 -->
+  <div class="modal-overlay" id="searchModalOverlay">
+    <div class="modal">
+      <h3>카드 검색</h3>
+      <input type="text" id="searchInput" placeholder="검색어..." style="width:100%"/>
+      <div id="searchResultList" style="margin-top:10px;max-height:200px;overflow:auto;"></div>
+      <button class="closeBtn" id="btnSearchClose">닫기</button>
+    </div>
+  </div>
+
+  <!-- 그래프 모달 -->
+  <div class="modal-overlay" id="graphModalOverlay">
+    <div class="modal">
+      <h3>Graph View</h3>
+      <button class="closeBtn" id="btnGraphClose">닫기</button>
+      <div id="graphContainer"></div>
+    </div>
+  </div>
+
+  <!-- 불완료 (For/Need 비어있는) 카드 모달 -->
+  <div class="modal-overlay" id="incompleteModalOverlay">
+    <div class="modal">
+      <h3>For/Need 비어있는 카드 목록</h3>
+      <button class="closeBtn" id="btnIncompleteClose">닫기</button>
+      <div id="incompleteList"></div>
+    </div>
+  </div>
 </body>
 </html>
-
-
