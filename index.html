@@ -10,11 +10,15 @@
     }
     .card-item {
       cursor: pointer;
-      padding: 8px;
-      border-bottom: 1px solid #ccc;
+      padding: 8px 16px;
+      border-bottom: 1px solid #eee;
     }
     .card-item:hover {
-      background-color: #f0f0f0;
+      background: #f5f5f5;
+    }
+    .card-item.selected {
+      background: #e3f2fd;
+      border-left: 4px solid #2196F3;
     }
     .modal-overlay {
       position: fixed;
@@ -40,23 +44,25 @@
     }
     .dropdown-list {
       position: absolute;
-      background: #fff;
-      border: 1px solid #aaa;
-      max-height: 180px;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      max-height: 200px;
       overflow-y: auto;
-      width: 90%;
-      z-index: 999;
+      width: calc(100% - 40px);
+      z-index: 1000;
+      margin-top: 2px;
     }
     .dropdown-item {
-      padding: 5px;
-      border-bottom: 1px solid #eee;
+      padding: 8px 12px;
       cursor: pointer;
     }
     .dropdown-item:hover {
       background: #f0f0f0;
     }
     .dropdown-item.nonexistent {
-      color: #999; /* 연한색 */
+      color: #666;
+      font-style: italic;
     }
     #graphContainer {
       width: 600px;
@@ -67,54 +73,177 @@
       position: absolute;
       top: 10px; right: 10px;
     }
+    .tag-container {
+      position: relative;
+      border: 1px solid #ccc;
+      padding: 5px;
+      min-height: 32px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+    .tag {
+      background: #e0e0e0;
+      padding: 2px 8px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .tag-remove {
+      cursor: pointer;
+      color: #666;
+    }
+    .tag-input {
+      border: none;
+      outline: none;
+      flex: 1;
+      min-width: 60px;
+    }
+    .accordion-header {
+      background: #f0f0f0;
+      padding: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      margin-top: 10px;
+    }
+    .accordion-header:hover {
+      background: #e0e0e0;
+    }
+    .accordion-icon {
+      margin-right: 10px;
+      transition: transform 0.3s;
+    }
+    .accordion-icon.open {
+      transform: rotate(90deg);
+    }
+    .accordion-content {
+      padding: 10px;
+      display: none;
+      border: 1px solid #ddd;
+      border-top: none;
+    }
+    .accordion-content.open {
+      display: block;
+    }
+    .main-fields {
+      margin-bottom: 20px;
+    }
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 10px 20px;
+      border-radius: 4px;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      font-size: 14px;
+      z-index: 1000;
+      animation: fadeInOut 3s ease;
+    }
+    
+    .toast.error {
+      background: rgba(255, 0, 0, 0.8);
+    }
+    
+    @keyframes fadeInOut {
+      0% { opacity: 0; transform: translateY(20px); }
+      10% { opacity: 1; transform: translateY(0); }
+      90% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-20px); }
+    }
+
+    .refresh-button {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      padding: 8px 16px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      z-index: 100;
+    }
+
+    .refresh-button:hover {
+      background: #45a049;
+    }
+
+    .container {
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .card-list {
+      margin-top: 20px;
+      border: 1px solid #eee;
+      border-radius: 4px;
+    }
   </style>
   <!-- cytoscape -->
   <script src="node_modules/cytoscape/dist/cytoscape.min.js"></script>
-  <script src="renderer.js"></script>
 </head>
 <body>
-  <h1>ForNeed (All-in-One Final)</h1>
-  <button id="createCardButton">새 카드 (Ctrl+N)</button>
-  <button id="openSearchButton">검색 (Ctrl+O)</button>
-  <button id="graphViewButton">그래프 보기</button>
-  <button id="showIncompleteButton">For/Need 비어있는 카드</button>
-  <button id="exportPlanButton">계획 내보내기</button>
+  <div class="container">
+    <h1>ForNeed (All-in-One Final)</h1>
+    <button id="createCardButton">새 카드 (Ctrl+N)</button>
+    <button id="openSearchButton">검색 (Ctrl+O)</button>
+    <button id="graphViewButton">그래프 보기</button>
+    <button id="showIncompleteButton">For/Need 비어있는 카드</button>
+    <button id="exportPlanButton">계획 내보내기</button>
 
-  <h2>카드 목록</h2>
-  <div id="cardList"></div>
+    <h2>카드 목록</h2>
+    <div class="card-list" id="cardList"></div>
+  </div>
 
   <!-- 새 카드 생성 모달 -->
   <div class="modal-overlay" id="createModalOverlay">
     <div class="modal">
       <h3>새 카드 만들기</h3>
-      <label>제목(Title)</label><br/>
-      <input type="text" id="createTitleInput"/><br/><br/>
+      
+      <!-- 주요 필드 -->
+      <div class="main-fields">
+        <label>제목(Title)</label><br/>
+        <input type="text" id="createTitleInput"/><br/><br/>
 
-      <label>For 값 (쉼표 구분, 위)</label><br/>
-      <input type="text" id="createForInput" autocomplete="off"/>
-      <div id="createForDropdown" class="dropdown-list" style="display:none;"></div>
-      <br/><br/>
+        <label>For 값 (Enter로 추가)</label><br/>
+        <div class="tag-container" id="createForContainer">
+          <input type="text" class="tag-input" id="createForInput" placeholder="입력 후 Enter"/>
+        </div>
+        <div id="createForInputDropdown" class="dropdown-list" style="display:none;"></div>
+        <br/>
 
-      <label>Need 값 (쉼표 구분, 아래)</label><br/>
-      <input type="text" id="createNeedInput" autocomplete="off"/>
-      <div id="createNeedDropdown" class="dropdown-list" style="display:none;"></div>
-      <br/><br/>
+        <label>Need 값 (Enter로 추가)</label><br/>
+        <div class="tag-container" id="createNeedContainer">
+          <input type="text" class="tag-input" id="createNeedInput" placeholder="입력 후 Enter"/>
+        </div>
+        <div id="createNeedInputDropdown" class="dropdown-list" style="display:none;"></div>
+      </div>
 
-      <label>내용(Content) - 비울수 있음</label><br/>
-      <textarea id="createContentInput" rows="2"></textarea><br/><br/>
+      <!-- 세부사항 아코디언 -->
+      <div class="accordion-header" onclick="toggleAccordion('createDetails')">
+        <span class="accordion-icon">▶</span>
+        <span>세부사항</span>
+      </div>
+      <div id="createDetails" class="accordion-content">
+        <label>내용(Content)</label><br/>
+        <textarea id="createContentInput" rows="2"></textarea><br/><br/>
 
+        <label>시작 날짜(Start)</label><br/>
+        <input type="date" id="createStartDate"/><br/><br/>
 
-      <label>시작 날짜(Start)</label><br/>
-      <input type="date" id="createStartDate"/><br/><br/>
+        <label>종료 날짜(End)</label><br/>
+        <input type="date" id="createEndDate"/><br/><br/>
 
-      <label>종료 날짜(End)</label><br/>
-      <input type="date" id="createEndDate"/><br/><br/>
+        <label>총 소요시간(TotalTime)</label><br/>
+        <input type="number" id="createTotalTime"/><br/><br/>
 
-      <label>총 소요시간(TotalTime)</label><br/>
-      <input type="number" id="createTotalTime"/><br/><br/>
-
-      <label>데드라인(Deadline)</label><br/>
-      <input type="date" id="createDeadline"/><br/><br/>
+        <label>데드라인(Deadline)</label><br/>
+        <input type="date" id="createDeadline"/><br/><br/>
+      </div>
 
       <button id="btnCreateConfirm">Create</button>
       <button id="btnCreateCancel">Cancel</button>
@@ -125,41 +254,55 @@
   <div class="modal-overlay" id="editModalOverlay">
     <div class="modal">
       <h3>카드 조회/편집</h3>
-      <label>제목(Title)</label><br/>
-      <input type="text" id="editTitleInput"/><br/><br/>
+      
+      <!-- 주요 필드 -->
+      <div class="main-fields">
+        <label>제목(Title)</label><br/>
+        <input type="text" id="editTitleInput"/><br/><br/>
 
-      <label>For 값</label><br/>
-      <input type="text" id="editForInput" autocomplete="off"/>
-      <div id="editForDropdown" class="dropdown-list" style="display:none;"></div>
-      <br/><br/>
+        <label>For 값 (Enter로 추가)</label><br/>
+        <div class="tag-container" id="editForContainer">
+          <input type="text" class="tag-input" id="editForInput" placeholder="입력 후 Enter"/>
+        </div>
+        <div id="editForInputDropdown" class="dropdown-list" style="display:none;"></div>
+        <div id="editForLinks"></div>
+        <br/>
 
-      <label>Need 값</label><br/>
-      <input type="text" id="editNeedInput" autocomplete="off"/>
-      <div id="editNeedDropdown" class="dropdown-list" style="display:none;"></div>
-      <br/><br/>
+        <label>Need 값 (Enter로 추가)</label><br/>
+        <div class="tag-container" id="editNeedContainer">
+          <input type="text" class="tag-input" id="editNeedInput" placeholder="입력 후 Enter"/>
+        </div>
+        <div id="editNeedInputDropdown" class="dropdown-list" style="display:none;"></div>
+        <div id="editNeedLinks"></div>
+      </div>
 
-      <label>내용(Content)</label><br/>
-      <textarea id="editContentInput" rows="2"></textarea><br/><br/>
+      <!-- 세부사항 아코디언 -->
+      <div class="accordion-header" onclick="toggleAccordion('editDetails')">
+        <span class="accordion-icon">▶</span>
+        <span>세부사항</span>
+      </div>
+      <div id="editDetails" class="accordion-content">
+        <label>내용(Content)</label><br/>
+        <textarea id="editContentInput" rows="2"></textarea><br/><br/>
 
-      <label>시작 날짜(Start)</label><br/>
-      <input type="date" id="editStartDate"/><br/><br/>
+        <label>시작 날짜(Start)</label><br/>
+        <input type="date" id="editStartDate"/><br/><br/>
 
-      <label>종료 날짜(End)</label><br/>
-      <input type="date" id="editEndDate"/><br/><br/>
+        <label>종료 날짜(End)</label><br/>
+        <input type="date" id="editEndDate"/><br/><br/>
 
-      <label>총 소요시간(TotalTime)</label><br/>
-      <input type="number" id="editTotalTime"/><br/><br/>
+        <label>총 소요시간(TotalTime)</label><br/>
+        <input type="number" id="editTotalTime"/><br/><br/>
 
-      <label>데드라인(Deadline)</label><br/>
-      <input type="date" id="editDeadline"/><br/><br/>
+        <label>데드라인(Deadline)</label><br/>
+        <input type="date" id="editDeadline"/><br/><br/>
 
-      <input type="checkbox" id="editCompleteCheck"/>
-      <label for="editCompleteCheck">완료</label><br/>
-      <input type="checkbox" id="editBookmarkCheck"/>
-      <label for="editBookmarkCheck">즐겨찾기</label><br/><br/>
-
-      <div id="editForLinks"></div>
-      <div id="editNeedLinks"></div>
+        <input type="checkbox" id="editCompleteCheck"/>
+        <label for="editCompleteCheck">완료</label><br/>
+        
+        <input type="checkbox" id="editBookmarkCheck"/>
+        <label for="editBookmarkCheck">즐겨찾기</label><br/><br/>
+      </div>
 
       <button id="btnDeleteCard" style="margin-right:10px;color:red;">Delete</button>
       <button id="btnEditConfirm">Save</button>
@@ -194,5 +337,8 @@
       <div id="incompleteList"></div>
     </div>
   </div>
+
+  <!-- 스크립트는 body 끝에 배치 -->
+  <script src="renderer.js"></script>
 </body>
 </html>
